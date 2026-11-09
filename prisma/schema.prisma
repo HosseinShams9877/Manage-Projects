@@ -1,0 +1,149 @@
+// Prisma schema — Project Management System (Persian / Jalali UI)
+// Docs: docs/00-knowledge-layer.md
+//
+// Storage note: all money fields are RIAL and use BigInt (no float error).
+// Dates are stored as ISO DateTime and converted to Jalali in the UI layer
+// (core/lib/format.ts). See docs/00 §7.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Development: SQLite. Production: switch provider to "postgresql"
+  // and set DATABASE_URL to a Postgres connection string. See README.md.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum InstallmentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum NotificationType {
+  EMPLOYER_PAYMENT
+  SYSTEM
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignments      ProjectAssignment[]
+  employeePayments EmployeePayment[]
+  notifications    Notification[]
+
+  @@index([role])
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  title         String
+  description   String   @default("")
+  clientCompany String   @default("")
+  contractPrice BigInt
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignments      ProjectAssignment[]
+  employerPayments EmployerPayment[]
+  installments     Installment[]
+  employeePayments EmployeePayment[]
+  notifications    Notification[]
+
+  @@index([clientCompany])
+}
+
+model ProjectAssignment {
+  id           String   @id @default(cuid())
+  projectId    String
+  userId       String
+  sharePercent Int
+  shareAmount  BigInt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model EmployerPayment {
+  id        String   @id @default(cuid())
+  projectId String
+  amount    BigInt
+  date      DateTime
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Installment {
+  id         String           @id @default(cuid())
+  projectId  String
+  dueDate    DateTime
+  amount     BigInt
+  paidAmount BigInt           @default(0)
+  remaining  BigInt
+  status     InstallmentStatus @default(PENDING)
+  note       String           @default("")
+  deletedAt  DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([dueDate])
+}
+
+model EmployeePayment {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  amount    BigInt
+  date      DateTime
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId, userId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(SYSTEM)
+  projectId String?
+  message   String
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}

@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Design Tokens — single source of truth for theming.
+   Change a variable here and the whole app re-themes.
+   Components never hard-code colors; use token-based utilities
+   (bg-background, text-foreground, border-border, ...).
+   ========================================================================== */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Brand */
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-200: #bcdaff;
+  --color-brand-300: #8ec2ff;
+  --color-brand-400: #59a0ff;
+  --color-brand-500: #2f7ef6;
+  --color-brand-600: #1a5fd9;
+  --color-brand-700: #1749ae;
+  --color-brand-800: #173d8c;
+  --color-brand-900: #183572;
+
+  /* Surfaces */
+  --color-background: #f6f7fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f3f9;
+  --color-muted: #e7eaf2;
+
+  /* Foreground */
+  --color-foreground: #111827;
+  --color-foreground-muted: #5b6472;
+  --color-foreground-subtle: #8a93a3;
+
+  /* Borders & rings */
+  --color-border: #e2e6ee;
+  --color-border-strong: #c9d0dd;
+  --color-ring: #2f7ef6;
+
+  /* Status */
+  --color-success: #1e9e6a;
+  --color-success-bg: #e3f7ee;
+  --color-warning: #c77d0a;
+  --color-warning-bg: #fdf3e0;
+  --color-danger: #d64545;
+  --color-danger-bg: #fdecec;
+  --color-info: #2f7ef6;
+  --color-info-bg: #eaf2ff;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12), 0 4px 8px rgba(15, 23, 42, 0.06);
+
+  /* Typography */
+  --font-sans: "Vazirmatn", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+}
+
+.dark {
+  /* Brand (slightly lightened for dark surfaces) */
+  --color-brand-50: #12233f;
+  --color-brand-100: #16294a;
+  --color-brand-200: #1d3560;
+  --color-brand-300: #2a4a82;
+  --color-brand-400: #4a74b8;
+  --color-brand-500: #5f8fd0;
+  --color-brand-600: #7ba3de;
+  --color-brand-700: #a2c2ec;
+  --color-brand-800: #c6d9f4;
+  --color-brand-900: #e3ecfb;
+
+  /* Surfaces */
+  --color-background: #0d1117;
+  --color-surface: #151b24;
+  --color-surface-2: #1a2230;
+  --color-muted: #232c3b;
+
+  /* Foreground */
+  --color-foreground: #e6eaf2;
+  --color-foreground-muted: #a3adbf;
+  --color-foreground-subtle: #77808f;
+
+  /* Borders & rings */
+  --color-border: #26303f;
+  --color-border-strong: #38465a;
+  --color-ring: #5f8fd0;
+
+  /* Status */
+  --color-success: #34c58f;
+  --color-success-bg: #0f2c22;
+  --color-warning: #e5a94c;
+  --color-warning-bg: #33250f;
+  --color-danger: #f06868;
+  --color-danger-bg: #341818;
+  --color-info: #5f8fd0;
+  --color-info-bg: #162338;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Map tokens to Tailwind theme so utilities like bg-background / text-foreground exist. */
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-muted: var(--color-muted);
+  --color-foreground: var(--color-foreground);
+  --color-foreground-muted: var(--color-foreground-muted);
+  --color-foreground-subtle: var(--color-foreground-subtle);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-ring: var(--color-ring);
+
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-danger: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-info: var(--color-info);
+  --color-info-bg: var(--color-info-bg);
+
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-900: var(--color-brand-900);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --font-sans: var(--font-sans);
+}
+
+/* RTL + Persian base */
+html {
+  direction: rtl;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Numbers render with tabular figures (Persian digits come from core/lib/format) */
+html {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ring) 35%, transparent);
+}
