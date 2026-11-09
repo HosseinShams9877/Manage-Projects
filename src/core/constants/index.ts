@@ -44,6 +44,8 @@ export const QUERY_KEYS = {
     all: ["employee-payments"] as const,
     byUser: (userId: string) => ["employee-payments", "user", userId] as const,
     byProject: (projectId: string) => ["employee-payments", "project", projectId] as const,
+    /** Projects an employee is assigned to, with their share/remaining (fix-up). */
+    assignedProjects: (userId: string) => ["employee-payments", "assigned-projects", userId] as const,
   },
   /** Employees: assignable list, balances overview, per-employee detail (Phase 4). */
   employees: {

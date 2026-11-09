@@ -27,11 +27,12 @@ export function useProjects() {
 }
 
 /** Single project by id. */
-export function useProject(id: string) {
+export function useProject(id: string, initialData?: ProjectDTO) {
   return useQuery({
     queryKey: QUERY_KEYS.projects.detail(id),
     queryFn: () => fetchProject(id),
     enabled: !!id,
+    initialData,
   });
 }
 

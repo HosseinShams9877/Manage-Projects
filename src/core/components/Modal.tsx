@@ -11,6 +11,11 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
+  /**
+   * On narrow phones (<500px) stretch to a full-screen sheet instead of a
+   * centered card (fix-up: payment dialogs must stay usable on mobile).
+   */
+  fullScreenOnMobile?: boolean;
 }
 
 const SIZES = {
@@ -22,7 +27,16 @@ const SIZES = {
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Modal({ open, onClose, title, description, children, footer, size = "md" }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = "md",
+  fullScreenOnMobile = false,
+}: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,7 +82,11 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${
+        fullScreenOnMobile ? "max-[499px]:p-0" : ""
+      }`}
+    >
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
@@ -79,7 +97,11 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className={`relative w-full ${SIZES[size]} max-h-[90vh] overflow-auto rounded-lg bg-surface border border-border shadow-lg focus:outline-none`}
+        className={`relative w-full ${SIZES[size]} max-h-[90vh] overflow-auto rounded-lg bg-surface border border-border shadow-lg focus:outline-none ${
+          fullScreenOnMobile
+            ? "max-[499px]:max-h-none max-[499px]:h-full max-[499px]:rounded-none max-[499px]:border-0"
+            : ""
+        }`}
       >
         <div className="flex items-start justify-between gap-3 p-4 border-b border-border">
           <div>

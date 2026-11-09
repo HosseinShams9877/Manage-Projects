@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Pencil, Trash2, Plus, CreditCard } from "lucide-react";
+import { Pencil, Trash2, Plus, CreditCard, Wallet, ExternalLink } from "lucide-react";
 import { Card } from "@/core/components/Card";
 import { Button } from "@/core/components/Button";
 import { Badge } from "@/core/components/Badge";
@@ -18,6 +18,7 @@ import type { EmployerPaymentDTO } from "@/modules/payments/lib/schema";
 import { useInstallments, useDeleteInstallment } from "@/modules/installments/hooks";
 import { useEmployeePayments } from "@/modules/employee-payments/hooks";
 import { EmployeePaymentTable } from "@/modules/employee-payments/components/EmployeePaymentTable";
+import { ProjectEmployeePaymentDialog } from "@/modules/employee-payments/components/ProjectEmployeePaymentDialog";
 import { InstallmentTable } from "@/modules/installments/components/InstallmentTable";
 import { InstallmentForm } from "@/modules/installments/components/InstallmentForm";
 import { BulkInstallmentForm } from "@/modules/installments/components/BulkInstallmentForm";
@@ -31,6 +32,7 @@ import {
   toPersianDigits,
 } from "@/core/lib/format";
 import { ProjectForm } from "./ProjectForm";
+import type { ProjectDTO } from "../lib/schema";
 import type { AssignableEmployee } from "./AssignmentEditor";
 
 interface ProjectDetailScreenProps {
@@ -39,6 +41,8 @@ interface ProjectDetailScreenProps {
   canManage: boolean;
   /** Employee view only: id of the signed-in user, enables the «پرداخت‌های من» tab. */
   selfUserId?: string;
+  /** Server-fetched project, so the whole page renders in the SSR HTML. */
+  initialProject?: ProjectDTO;
 }
 
 type TabKey = "payments" | "installments" | "assignments" | "myPayments";
@@ -90,9 +94,15 @@ function TabButton({
   );
 }
 
-export function ProjectDetailScreen({ id, basePath, canManage, selfUserId }: ProjectDetailScreenProps) {
+export function ProjectDetailScreen({
+  id,
+  basePath,
+  canManage,
+  selfUserId,
+  initialProject,
+}: ProjectDetailScreenProps) {
   const router = useRouter();
-  const { data: project, isLoading } = useProject(id);
+  const { data: project, isLoading } = useProject(id, initialProject);
   const { data: employeesData } = useAssignableEmployees(canManage);
   const { mutateAsync: deleteAsync, isPending: deleting } = useDeleteProject();
   const [editing, setEditing] = useState(false);
@@ -129,6 +139,12 @@ export function ProjectDetailScreen({ id, basePath, canManage, selfUserId }: Pro
   const [payingInstallment, setPayingInstallment] = useState<InstallmentDTO | null>(null);
   const [dueDateInstallment, setDueDateInstallment] = useState<InstallmentDTO | null>(null);
   const [installmentToDelete, setInstallmentToDelete] = useState<InstallmentDTO | null>(null);
+
+  // Employee-payment dialog state («سهم کارمندان» row actions, admin only).
+  const [employeePaymentFor, setEmployeePaymentFor] = useState<{
+    userId: string;
+    userName: string;
+  } | null>(null);
 
   if (isLoading) {
     return (
@@ -256,7 +272,10 @@ export function ProjectDetailScreen({ id, basePath, canManage, selfUserId }: Pro
         ))}
       </div>
 
-      {activeTab === "payments" && (
+      {/* All four panels stay mounted (CSS-hidden, not unmounted) so the whole
+          detail page — including the «سهم کارمندان» actions — renders in the
+          initial server-rendered HTML. */}
+      <div className={activeTab === "payments" ? "" : "hidden"}>
         <Card
           title="پرداخت‌های کارفرما"
           description="وجه نقد دریافتی از کارفرما"
@@ -291,9 +310,9 @@ export function ProjectDetailScreen({ id, basePath, canManage, selfUserId }: Pro
             />
           )}
         </Card>
-      )}
+      </div>
 
-      {activeTab === "installments" && (
+      <div className={activeTab === "installments" ? "" : "hidden"}>
         <div className="flex flex-col gap-4">
           {installmentsData?.debt && <DebtSummaryCard debt={installmentsData.debt} />}
 
@@ -340,37 +359,78 @@ export function ProjectDetailScreen({ id, basePath, canManage, selfUserId }: Pro
             )}
           </Card>
         </div>
-      )}
+      </div>
 
-      {activeTab === "myPayments" && showMyPayments && (
+      <div
+        className={`${activeTab === "myPayments" && showMyPayments ? "" : "hidden"}`}
+      >
         <Card
           title="پرداخت‌های من"
           description="پرداخت‌هایی که از سهم شما در این پروژه تسویه شده است."
         >
           <MyPaymentsTab projectId={project.id} />
         </Card>
-      )}
+      </div>
 
-      {activeTab === "assignments" && (
+      <div className={activeTab === "assignments" ? "" : "hidden"}>
         <Card
           title={canManage ? "سهم کارمندان" : "سهم شما در پروژه"}
           description={canManage ? "مجموع درصد سهم‌ها باید دقیقاً ۱۰۰ باشد." : undefined}
         >
           <Table
-            columns={["کارمند", "ایمیل", "درصد سهم", "مبلغ سهم"]}
-            rows={project.assignments.map((a) => [
-              <span key="name" className="font-medium text-foreground">{a.userName}</span>,
-              <span key="email" className="text-foreground-muted" dir="ltr">
-                {a.userEmail}
-              </span>,
-              <span key="percent" className="tabular-nums">{toPersianDigits(a.sharePercent)}٪</span>,
-              <span key="amount" className="tabular-nums whitespace-nowrap">
-                {formatToman(a.shareAmount)}
-              </span>,
-            ])}
+            columns={canManage ? ["کارمند", "ایمیل", "درصد سهم", "مبلغ سهم", "عملیات"] : ["کارمند", "ایمیل", "درصد سهم", "مبلغ سهم"]}
+            rows={project.assignments.map((a) => {
+              const cells = [
+                <span key="name" className="font-medium text-foreground">{a.userName}</span>,
+                <span key="email" className="text-foreground-muted" dir="ltr">
+                  {a.userEmail}
+                </span>,
+                <span key="percent" className="tabular-nums">{toPersianDigits(a.sharePercent)}٪</span>,
+                <span key="amount" className="tabular-nums whitespace-nowrap">
+                  {formatToman(a.shareAmount)}
+                </span>,
+              ];
+              if (canManage) {
+                cells.push(
+                  <div key="actions" className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEmployeePaymentFor({ userId: a.userId, userName: a.userName })
+                      }
+                      className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      ثبت پرداخت
+                    </button>
+                    <a
+                      href={`/admin/employees/${a.userId}`}
+                      className="inline-flex items-center gap-1 text-foreground-muted hover:text-foreground text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      پرونده کارمند
+                    </a>
+                  </div>,
+                );
+              }
+              return cells;
+            })}
             emptyText="کارمندی به این پروژه اختصاص نیافته است."
           />
         </Card>
+      </div>
+
+      {canManage && (
+        <ProjectEmployeePaymentDialog
+          open={employeePaymentFor !== null}
+          onOpenChange={(open) => {
+            if (!open) setEmployeePaymentFor(null);
+          }}
+          projectId={project.id}
+          projectTitle={project.title}
+          userId={employeePaymentFor?.userId ?? ""}
+          userName={employeePaymentFor?.userName ?? ""}
+        />
       )}
 
       {canManage && (

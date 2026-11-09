@@ -20,6 +20,7 @@ import { formatToman } from "@/core/lib/format";
 import { tomanStringToRial } from "@/core/lib/validation";
 import { notifyUser } from "@/modules/notifications/lib/service";
 import type {
+  AssignedProjectDTO,
   CreateEmployeePaymentInput,
   EmployeeBalanceDTO,
   EmployeeBalancesDTO,
@@ -43,6 +44,11 @@ type Session = { sub: string; role: "ADMIN" | "EMPLOYEE" };
 /** RIAL BigInt → Toman string with separators and Persian digits (no unit). */
 function tomanLabel(rial: bigint): string {
   return formatToman(rial, false);
+}
+
+/** RIAL string → plain TOMAN string (÷10), for the Toman-on-the-wire DTOs. */
+function rialStringToTomanString(rial: string): string {
+  return (BigInt(rial) / 10n).toString();
 }
 
 /** Sum + latest date of one employee's payments on one project. */
@@ -104,6 +110,44 @@ export async function getEmployeeProjectBalance(
 
   const paid = await paidOf(projectId, userId);
   return mapAssignmentToBalance(assignment, paid.sum, paid.max);
+}
+
+/**
+ * Projects one employee is assigned to, with their share and what is left of it.
+ * Admins may query anyone; an employee may only query themselves. Money leaves
+ * as TOMAN strings (÷10 of the stored RIAL), per the fix-up contract.
+ */
+export async function listAssignedProjectsForEmployee(
+  userId: string,
+  session: Session,
+): Promise<AssignedProjectDTO[]> {
+  if (session.role !== "ADMIN" && session.sub !== userId) throw PersianErrors.forbidden();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (!user) throw PersianErrors.notFound("کارمند");
+
+  const assignments = await prisma.projectAssignment.findMany({
+    where: { userId },
+    orderBy: { project: { title: "asc" } },
+  });
+
+  // Reuse the per-project balance helper so this list can never disagree with
+  // the balance endpoint (same share/paid/remaining math).
+  const balances = await Promise.all(
+    assignments.map((a) => getEmployeeProjectBalance(a.projectId, userId)),
+  );
+
+  return balances.map((b) => ({
+    projectId: b.projectId,
+    projectTitle: b.title,
+    sharePercent: b.sharePercent,
+    shareAmount: rialStringToTomanString(b.shareAmount),
+    paidToEmployee: rialStringToTomanString(b.paid),
+    remaining: rialStringToTomanString(b.remaining),
+  }));
 }
 
 /** Full balance of one employee: totals + per-project breakdown. */

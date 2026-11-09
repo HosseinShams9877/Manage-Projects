@@ -107,6 +107,27 @@ export interface EmployeeBalancesDTO {
   employees: EmployeeBalanceDTO[];
 }
 
+/**
+ * One assigned project of an employee, as returned by
+ * GET /api/employees/[id]/assigned-projects (fix-up patch).
+ *
+ * NOTE: unlike every other DTO in this module (RIAL strings), the money fields
+ * here are **TOMAN** strings on the wire (shareAmount, paidToEmployee,
+ * remaining). The client compares/guards against them directly, without the
+ * ×10 conversion the RIAL-string DTOs need.
+ */
+export interface AssignedProjectDTO {
+  projectId: string;
+  projectTitle: string;
+  sharePercent: number;
+  /** TOMAN, serialized as string. */
+  shareAmount: string;
+  /** TOMAN, serialized as string. */
+  paidToEmployee: string;
+  /** TOMAN, serialized as string. shareAmount − paidToEmployee. */
+  remaining: string;
+}
+
 /** Client-side form values (amount is a TOMAN string as typed). */
 export interface EmployeePaymentFormValues {
   userId: string;

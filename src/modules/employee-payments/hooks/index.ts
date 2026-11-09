@@ -12,12 +12,14 @@ import { invalidateEmployeeLedger } from "@/core/lib/query-cache";
 import {
   createEmployeePayment as createEmployeePaymentApi,
   deleteEmployeePayment as deleteEmployeePaymentApi,
+  fetchAssignedProjects,
   fetchEmployeeBalance,
   fetchEmployeeBalances,
   fetchEmployeePayments,
   updateEmployeePayment as updateEmployeePaymentApi,
 } from "../api";
 import type {
+  AssignedProjectDTO,
   EmployeeBalanceDTO,
   EmployeeBalancesDTO,
   EmployeePaymentDTO,
@@ -29,7 +31,10 @@ import type {
 type MutationOptions<TData, TVars> = Omit<UseMutationOptions<TData, Error, TVars>, "mutationFn">;
 
 /** Employee payments, optionally narrowed by user and/or project. */
-export function useEmployeePayments(filter: EmployeePaymentFilter = {}) {
+export function useEmployeePayments(
+  filter: EmployeePaymentFilter = {},
+  initialData?: EmployeePaymentListDTO,
+) {
   // Both filters set → a dedicated key; prefix invalidation still matches it.
   const queryKey =
     filter.userId && filter.projectId
@@ -43,29 +48,51 @@ export function useEmployeePayments(filter: EmployeePaymentFilter = {}) {
   return useQuery({
     queryKey,
     queryFn: () => fetchEmployeePayments(filter),
+    initialData,
   });
 }
 
 /** Balances of every employee (admin overview). */
-export function useEmployeeBalances() {
+export function useEmployeeBalances(initialData?: EmployeeBalancesDTO) {
   return useQuery({
     queryKey: QUERY_KEYS.employees.balances,
     queryFn: fetchEmployeeBalances,
+    initialData,
   });
 }
 
 /** Balance of one employee (admin detail page / own panel). */
-export function useEmployeeBalance(userId: string, enabled = true) {
+export function useEmployeeBalance(
+  userId: string,
+  enabled = true,
+  initialData?: EmployeeBalanceDTO,
+) {
   return useQuery({
     queryKey: QUERY_KEYS.employees.detail(userId),
     queryFn: () => fetchEmployeeBalance(userId),
     enabled: enabled && !!userId,
+    initialData,
   });
 }
 
-/** Create an employee payment; invalidates that employee's whole ledger. */
+/** Projects one employee is assigned to, with their share and remaining (fix-up). */
+export function useEmployeeAssignedProjects(userId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.employeePayments.assignedProjects(userId),
+    queryFn: () => fetchAssignedProjects(userId),
+    enabled: !!userId,
+  });
+}
+
+/**
+ * Create an employee payment; invalidates that employee's whole ledger.
+ * `successMessage` overrides the default Persian toast (fix-up: the new
+ * dialogs address the employee by name).
+ */
 export function useCreateEmployeePayment(
-  options?: MutationOptions<EmployeePaymentDTO, EmployeePaymentFormValues>,
+  options?: MutationOptions<EmployeePaymentDTO, EmployeePaymentFormValues> & {
+    successMessage?: string;
+  },
 ) {
   const queryClient = useQueryClient();
   return useMutation<EmployeePaymentDTO, Error, EmployeePaymentFormValues>({
@@ -73,7 +100,7 @@ export function useCreateEmployeePayment(
     mutationFn: (values) => createEmployeePaymentApi(values),
     onSuccess: async (data, vars, ctx, context) => {
       await invalidateEmployeeLedger(queryClient, vars.userId);
-      persianToast.success("پرداخت کارمند ثبت شد.");
+      persianToast.success(options?.successMessage ?? "پرداخت کارمند ثبت شد.");
       options?.onSuccess?.(data, vars, ctx, context);
     },
     onError: (error, vars, ctx, context) => {

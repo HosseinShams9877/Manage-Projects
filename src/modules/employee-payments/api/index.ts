@@ -2,6 +2,7 @@
 
 import { api } from "@/core/lib/api-client";
 import type {
+  AssignedProjectDTO,
   EmployeeBalanceDTO,
   EmployeeBalancesDTO,
   EmployeePaymentDTO,
@@ -50,4 +51,9 @@ export async function fetchEmployeeBalances(): Promise<EmployeeBalancesDTO> {
 /** One employee's balance (admin detail page, or the employee's own panel). */
 export async function fetchEmployeeBalance(userId: string): Promise<EmployeeBalanceDTO> {
   return api.get(`/api/employees/${userId}/balance`);
+}
+
+/** One employee's assigned projects with share/remaining, TOMAN strings (fix-up). */
+export async function fetchAssignedProjects(userId: string): Promise<AssignedProjectDTO[]> {
+  return api.get(`/api/employees/${userId}/assigned-projects`);
 }

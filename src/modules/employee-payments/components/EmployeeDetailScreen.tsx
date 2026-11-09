@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, Wallet } from "lucide-react";
 import { Card } from "@/core/components/Card";
 import { Badge } from "@/core/components/Badge";
 import { Button } from "@/core/components/Button";
@@ -10,8 +10,14 @@ import { formatJalali, formatToman } from "@/core/lib/format";
 import { useEmployeeBalance, useEmployeePayments } from "../hooks";
 import { EmployeePaymentTable } from "./EmployeePaymentTable";
 import { EmployeePaymentForm } from "./EmployeePaymentForm";
+import { EmployeePaymentCreateDialog } from "./EmployeePaymentCreateDialog";
+import { ProjectEmployeePaymentDialog } from "./ProjectEmployeePaymentDialog";
 import { DeleteEmployeePaymentDialog } from "./DeleteEmployeePaymentDialog";
-import type { EmployeePaymentDTO } from "../lib/schema";
+import type {
+  EmployeeBalanceDTO,
+  EmployeePaymentDTO,
+  EmployeePaymentListDTO,
+} from "../lib/schema";
 
 interface EmployeeDetailScreenProps {
   id: string;
@@ -19,6 +25,10 @@ interface EmployeeDetailScreenProps {
   canManage: boolean;
   /** Where the "back" link points. */
   backHref?: string;
+  /** Server-fetched balance, so the page is populated in the SSR HTML too. */
+  initialBalance?: EmployeeBalanceDTO;
+  /** Server-fetched payments, same reason as above. */
+  initialPayments?: EmployeePaymentListDTO;
 }
 
 const BALANCE_COLUMNS = [
@@ -29,15 +39,29 @@ const BALANCE_COLUMNS = [
   "مانده",
   "آخرین پرداخت",
 ];
+const BALANCE_COLUMNS_ADMIN = [...BALANCE_COLUMNS, "عملیات"];
 
-export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetailScreenProps) {
-  const { data: balance, isLoading } = useEmployeeBalance(id);
-  const { data: paymentsData, isLoading: paymentsLoading } = useEmployeePayments({ userId: id });
+export function EmployeeDetailScreen({
+  id,
+  canManage,
+  backHref,
+  initialBalance,
+  initialPayments,
+}: EmployeeDetailScreenProps) {
+  const { data: balance, isLoading } = useEmployeeBalance(id, true, initialBalance);
+  const { data: paymentsData, isLoading: paymentsLoading } = useEmployeePayments(
+    { userId: id },
+    initialPayments,
+  );
   const payments = paymentsData?.payments ?? [];
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<EmployeePaymentDTO | null>(null);
   const [deleting, setDeleting] = useState<EmployeePaymentDTO | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [projectPayment, setProjectPayment] = useState<{ projectId: string; title: string } | null>(
+    null,
+  );
 
   const handleEdit = (payment: EmployeePaymentDTO) => {
     setEditing(payment);
@@ -46,7 +70,7 @@ export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetail
 
   const handleCreate = () => {
     setEditing(null);
-    setFormOpen(true);
+    setCreateOpen(true);
   };
 
   if (isLoading || !balance) {
@@ -117,30 +141,50 @@ export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetail
           <>
             <div className="hidden md:block -mx-4">
               <Table
-                columns={BALANCE_COLUMNS}
-                rows={projects.map((p) => [
-                  <span key="title" className="font-medium text-foreground">
-                    {p.title}
-                  </span>,
-                  <span key="percent" className="tabular-nums">
-                    {p.sharePercent}٪
-                  </span>,
-                  <span key="share" className="tabular-nums whitespace-nowrap">
-                    {formatToman(p.shareAmount)}
-                  </span>,
-                  <span key="paid" className="tabular-nums whitespace-nowrap">
-                    {formatToman(p.paid)}
-                  </span>,
-                  <Badge
-                    key="remaining"
-                    tone={BigInt(p.remaining) <= 0n ? "success" : "warning"}
-                  >
-                    <span className="tabular-nums">{formatToman(p.remaining)}</span>
-                  </Badge>,
-                  <span key="last" className="tabular-nums text-foreground-muted whitespace-nowrap">
-                    {p.lastPaymentDate ? formatJalali(p.lastPaymentDate) : "—"}
-                  </span>,
-                ])}
+                columns={canManage ? BALANCE_COLUMNS_ADMIN : BALANCE_COLUMNS}
+                rows={projects.map((p) => {
+                  const cells = [
+                    <a
+                      key="title"
+                      href={`/admin/projects/${p.projectId}`}
+                      className="font-medium text-foreground hover:text-brand-600 transition-colors"
+                    >
+                      {p.title}
+                    </a>,
+                    <span key="percent" className="tabular-nums">
+                      {p.sharePercent}٪
+                    </span>,
+                    <span key="share" className="tabular-nums whitespace-nowrap">
+                      {formatToman(p.shareAmount)}
+                    </span>,
+                    <span key="paid" className="tabular-nums whitespace-nowrap">
+                      {formatToman(p.paid)}
+                    </span>,
+                    <Badge
+                      key="remaining"
+                      tone={BigInt(p.remaining) <= 0n ? "success" : "warning"}
+                    >
+                      <span className="tabular-nums">{formatToman(p.remaining)}</span>
+                    </Badge>,
+                    <span key="last" className="tabular-nums text-foreground-muted whitespace-nowrap">
+                      {p.lastPaymentDate ? formatJalali(p.lastPaymentDate) : "—"}
+                    </span>,
+                  ];
+                  if (canManage) {
+                    cells.push(
+                      <button
+                        key="pay"
+                        type="button"
+                        onClick={() => setProjectPayment({ projectId: p.projectId, title: p.title })}
+                        className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        ثبت پرداخت
+                      </button>,
+                    );
+                  }
+                  return cells;
+                })}
                 emptyText=""
               />
             </div>
@@ -151,7 +195,12 @@ export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetail
                   className="rounded-lg border border-border bg-background p-4 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-foreground">{p.title}</span>
+                    <a
+                      href={`/admin/projects/${p.projectId}`}
+                      className="text-sm font-medium text-foreground hover:text-brand-600 transition-colors"
+                    >
+                      {p.title}
+                    </a>
                     <span className="text-xs text-foreground-muted tabular-nums">
                       {p.sharePercent}٪
                     </span>
@@ -176,6 +225,16 @@ export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetail
                       {p.lastPaymentDate ? formatJalali(p.lastPaymentDate) : "—"}
                     </span>
                   </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setProjectPayment({ projectId: p.projectId, title: p.title })}
+                      className="mt-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-md border border-border bg-surface text-sm font-medium text-brand-600 hover:bg-surface-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      ثبت پرداخت
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -207,6 +266,22 @@ export function EmployeeDetailScreen({ id, canManage, backHref }: EmployeeDetail
 
       {canManage && (
         <>
+          <EmployeePaymentCreateDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            userId={id}
+            userName={balance.name}
+          />
+          <ProjectEmployeePaymentDialog
+            open={projectPayment !== null}
+            onOpenChange={(open) => {
+              if (!open) setProjectPayment(null);
+            }}
+            projectId={projectPayment?.projectId ?? ""}
+            projectTitle={projectPayment?.title ?? ""}
+            userId={id}
+            userName={balance.name}
+          />
           <EmployeePaymentForm
             open={formOpen}
             onClose={() => setFormOpen(false)}
