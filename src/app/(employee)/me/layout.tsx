@@ -13,7 +13,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border bg-surface sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="px-4 md:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-lg bg-brand-600 text-white grid place-items-center font-bold">
               م
@@ -29,7 +29,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
           </div>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto w-full px-4 py-6 flex-1 pb-20 md:pb-6">
+      <main className="w-full px-4 md:px-6 py-6 flex-1 pb-20 md:pb-6 min-w-0">
         <EmployeeNav />
         {children}
       </main>

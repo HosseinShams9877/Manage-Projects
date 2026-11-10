@@ -39,13 +39,21 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Keep the latest callback without making the keydown listener re-subscribe.
+  // `onClose` is usually an inline arrow from the parent, so depending on its
+  // identity in an effect would re-run that effect on EVERY parent render —
+  // which used to re-focus the panel and steal focus from inputs on each
+  // keystroke (the “one character then focus is lost” bug).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
     const panel = panelRef.current;
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       // Focus trap (polish §3h): Tab cycles inside the dialog and never leaks
@@ -69,15 +77,23 @@ export function Modal({
       }
     };
 
-    // Move focus into the dialog on open (screen readers announce it).
-    panel?.focus();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  // Move focus into the dialog only when it OPENS (false → true), never on
+  // re-renders while open — typing must not move focus.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      panelRef.current?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   if (!open) return null;
 

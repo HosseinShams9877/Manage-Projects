@@ -7,7 +7,7 @@ import { CardSkeletonGrid } from "@/core/components/Skeleton";
 export default function Loading() {
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 py-6">
+      <div className="w-full flex flex-col gap-6 py-6">
         <div className="flex flex-col gap-2">
           <div className="animate-pulse rounded-md bg-muted h-6 w-40" />
           <div className="animate-pulse rounded-md bg-muted h-4 w-72" />

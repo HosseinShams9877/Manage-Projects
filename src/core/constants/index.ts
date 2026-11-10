@@ -47,6 +47,11 @@ export const QUERY_KEYS = {
     /** Projects an employee is assigned to, with their share/remaining (fix-up). */
     assignedProjects: (userId: string) => ["employee-payments", "assigned-projects", userId] as const,
   },
+  /** Users: admin user management (CRUD, Employee Management patch). */
+  users: {
+    all: ["users"] as const,
+    detail: (id: string) => ["users", id] as const,
+  },
   /** Employees: assignable list, balances overview, per-employee detail (Phase 4). */
   employees: {
     all: ["employees"] as const,

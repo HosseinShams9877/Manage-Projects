@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Plus, Wallet } from "lucide-react";
+import { ArrowRight, Pencil, Plus, Wallet } from "lucide-react";
 import { Card } from "@/core/components/Card";
 import { Badge } from "@/core/components/Badge";
 import { Button } from "@/core/components/Button";
 import { Table } from "@/core/components/Table";
 import { formatJalali, formatToman } from "@/core/lib/format";
 import { useEmployeeBalance, useEmployeePayments } from "../hooks";
+import { UserFormDialog } from "@/modules/users/components/UserFormDialog";
 import { EmployeePaymentTable } from "./EmployeePaymentTable";
 import { EmployeePaymentForm } from "./EmployeePaymentForm";
 import { EmployeePaymentCreateDialog } from "./EmployeePaymentCreateDialog";
@@ -48,7 +49,11 @@ export function EmployeeDetailScreen({
   initialBalance,
   initialPayments,
 }: EmployeeDetailScreenProps) {
-  const { data: balance, isLoading } = useEmployeeBalance(id, true, initialBalance);
+  const { data: balance, isLoading, refetch: refetchBalance } = useEmployeeBalance(
+    id,
+    true,
+    initialBalance,
+  );
   const { data: paymentsData, isLoading: paymentsLoading } = useEmployeePayments(
     { userId: id },
     initialPayments,
@@ -59,6 +64,7 @@ export function EmployeeDetailScreen({
   const [editing, setEditing] = useState<EmployeePaymentDTO | null>(null);
   const [deleting, setDeleting] = useState<EmployeePaymentDTO | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editUserOpen, setEditUserOpen] = useState(false);
   const [projectPayment, setProjectPayment] = useState<{ projectId: string; title: string } | null>(
     null,
   );
@@ -103,9 +109,17 @@ export function EmployeeDetailScreen({
               {balance.email}
             </p>
           </div>
-          <Badge tone={balance.role === "ADMIN" ? "info" : "neutral"}>
-            {balance.role === "ADMIN" ? "مدیر" : "کارمند"}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone={balance.role === "ADMIN" ? "info" : "neutral"}>
+              {balance.role === "ADMIN" ? "مدیر" : "کارمند"}
+            </Badge>
+            {canManage && (
+              <Button size="sm" variant="secondary" onClick={() => setEditUserOpen(true)}>
+                <Pencil className="w-4 h-4" />
+                ویرایش اطلاعات
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -266,6 +280,20 @@ export function EmployeeDetailScreen({
 
       {canManage && (
         <>
+          <UserFormDialog
+            open={editUserOpen}
+            onOpenChange={setEditUserOpen}
+            initialData={{
+              id,
+              name: balance.name,
+              email: balance.email,
+              role: balance.role,
+            }}
+            onSuccess={() => {
+              /* The hook invalidates users/employees keys; refresh this page's data. */
+              void refetchBalance();
+            }}
+          />
           <EmployeePaymentCreateDialog
             open={createOpen}
             onOpenChange={setCreateOpen}

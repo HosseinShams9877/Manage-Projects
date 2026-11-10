@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border bg-surface sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="px-4 md:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-lg bg-brand-600 text-white grid place-items-center font-bold">
               م
@@ -43,7 +43,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto w-full px-4 py-6 flex flex-col md:flex-row gap-6 flex-1">
+      <div className="w-full px-4 md:px-6 py-6 flex flex-col md:flex-row gap-6 flex-1">
         <nav className="md:w-56 shrink-0">
           <ul className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0">
             {NAV.map((item) => (
